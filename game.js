@@ -9,21 +9,39 @@ canvas.height = 600;
 const paddleWidth = 80;
 const paddleHeight = 10;
 const ballRadius = 6;
-const brickRowCount = 4;
-const brickColumnCount = 8;  // Increased columns for full width
-const brickPadding = 2;     // Reduced padding between bricks
-const brickHeight = 25;     // Slightly taller bricks
-// Calculate brick width based on canvas width
+const brickRowCount = 20;  // Keep 20 rows
+const brickPadding = 1;    // Keep minimum padding
+// Calculate small brick size (approximately 1/64 of original size)
+const desiredBrickSize = 12;   // Back to 1/64 size (12 pixels)
+const brickColumnCount = Math.floor(canvas.width / (desiredBrickSize + brickPadding));
+// Now calculate actual brick width to fill screen evenly
 const brickWidth = (canvas.width - (brickPadding * (brickColumnCount + 1))) / brickColumnCount;
+const brickHeight = brickWidth;  // Keep bricks square
 const brickOffsetTop = 30;
-const brickOffsetLeft = brickPadding; // Start from left edge with padding
+const brickOffsetLeft = (canvas.width - (brickColumnCount * (brickWidth + brickPadding) - brickPadding)) / 2;
 
-// Retro color palette
+// Extended color palette for 20 rows
 const brickColors = [
     '#FF0000', // Red
+    '#FF4500', // Orange Red
     '#FF7F00', // Orange
+    '#FFD700', // Gold
     '#FFFF00', // Yellow
+    '#ADFF2F', // Green Yellow
     '#00FF00', // Green
+    '#32CD32', // Lime Green
+    '#00FA9A', // Medium Spring Green
+    '#00CED1', // Dark Turquoise
+    '#1E90FF', // Dodger Blue
+    '#0000FF', // Blue
+    '#4169E1', // Royal Blue
+    '#4B0082', // Indigo
+    '#8A2BE2', // Blue Violet
+    '#9400D3', // Dark Violet
+    '#8B00FF', // Violet
+    '#FF00FF', // Magenta
+    '#FF1493', // Deep Pink
+    '#FF69B4', // Hot Pink
 ];
 
 // Game state
@@ -50,7 +68,7 @@ const ball = {
     speed: 7
 };
 
-// Create bricks with colors
+// Create bricks with random colors
 const bricks = [];
 for (let c = 0; c < brickColumnCount; c++) {
     bricks[c] = [];
@@ -59,7 +77,7 @@ for (let c = 0; c < brickColumnCount; c++) {
             x: 0, 
             y: 0, 
             status: 1,
-            color: brickColors[r] // Each row has its own color
+            color: brickColors[Math.floor(Math.random() * brickColors.length)] // Random color for each brick
         };
     }
 }

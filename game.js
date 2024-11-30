@@ -46,7 +46,8 @@ const ball = {
     y: paddle.y - ballRadius,
     dx: 5,
     dy: -5,
-    radius: ballRadius
+    radius: ballRadius,
+    speed: 7
 };
 
 // Create bricks with colors
@@ -122,6 +123,32 @@ function checkWin() {
     }
     if (allBroken) {
         gameWon = true;
+    }
+}
+
+function checkPaddleCollision() {
+    if (ball.y + ball.radius > paddle.y && 
+        ball.y - ball.radius < paddle.y + paddle.height &&
+        ball.x + ball.radius > paddle.x && 
+        ball.x - ball.radius < paddle.x + paddle.width) {
+        
+        // Calculate where on the paddle the ball hit (0 = left edge, 1 = right edge)
+        const hitPos = (ball.x - paddle.x) / paddle.width;
+        
+        // Change angle based on where the ball hits the paddle
+        // Hit on edges causes more extreme angles
+        const maxBounceAngle = Math.PI / 3; // 60 degrees
+        const bounceAngle = maxBounceAngle * (hitPos - 0.5);
+        
+        // Set new velocity based on bounce angle
+        ball.dx = ball.speed * Math.sin(bounceAngle);
+        ball.dy = -ball.speed * Math.cos(bounceAngle);
+        
+        // Ensure ball doesn't get stuck in paddle
+        ball.y = paddle.y - ball.radius;
+        
+        // Add slight speed increase on each hit
+        ball.speed = Math.min(ball.speed * 1.05, 15); // Cap max speed at 15
     }
 }
 
@@ -305,6 +332,7 @@ function draw() {
 
     // Check for collisions
     collisionDetection();
+    checkPaddleCollision();
 
     // Ball collision with walls
     if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
@@ -313,19 +341,16 @@ function draw() {
     if (ball.y + ball.dy < ball.radius) {
         ball.dy = -ball.dy;
     } else if (ball.y + ball.dy > canvas.height - ball.radius) {
-        if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
-            ball.dy = -ball.dy;
+        lives--;
+        if (!lives) {
+            gameOver = true;
         } else {
-            lives--;
-            if (!lives) {
-                gameOver = true;
-            } else {
-                ball.x = canvas.width / 2;
-                ball.y = paddle.y - ball.radius;
-                ball.dx = 5;
-                ball.dy = -5;
-                paddle.x = (canvas.width - paddle.width) / 2;
-            }
+            ball.x = canvas.width / 2;
+            ball.y = paddle.y - ball.radius;
+            ball.dx = 5;
+            ball.dy = -5;
+            ball.speed = 7;
+            paddle.x = (canvas.width - paddle.width) / 2;
         }
     }
 

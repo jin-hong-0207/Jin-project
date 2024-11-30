@@ -6,16 +6,25 @@ canvas.width = 800;
 canvas.height = 600;
 
 // Game objects
-const paddleWidth = 100;
+const paddleWidth = 80;
 const paddleHeight = 10;
-const ballRadius = 8;
-const brickRowCount = 5;
-const brickColumnCount = 8;
-const brickWidth = 80;
-const brickHeight = 20;
-const brickPadding = 10;
+const ballRadius = 6;
+const brickRowCount = 4;
+const brickColumnCount = 8;  // Increased columns for full width
+const brickPadding = 2;     // Reduced padding between bricks
+const brickHeight = 25;     // Slightly taller bricks
+// Calculate brick width based on canvas width
+const brickWidth = (canvas.width - (brickPadding * (brickColumnCount + 1))) / brickColumnCount;
 const brickOffsetTop = 30;
-const brickOffsetLeft = 55;
+const brickOffsetLeft = brickPadding; // Start from left edge with padding
+
+// Retro color palette
+const brickColors = [
+    '#FF0000', // Red
+    '#FF7F00', // Orange
+    '#FFFF00', // Yellow
+    '#00FF00', // Green
+];
 
 // Game state
 let lives = 3;
@@ -40,12 +49,17 @@ const ball = {
     radius: ballRadius
 };
 
-// Create bricks
+// Create bricks with colors
 const bricks = [];
 for (let c = 0; c < brickColumnCount; c++) {
     bricks[c] = [];
     for (let r = 0; r < brickRowCount; r++) {
-        bricks[c][r] = { x: 0, y: 0, status: 1 };
+        bricks[c][r] = { 
+            x: 0, 
+            y: 0, 
+            status: 1,
+            color: brickColors[r] // Each row has its own color
+        };
     }
 }
 
@@ -115,7 +129,20 @@ function checkWin() {
 function drawBall() {
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#0095DD';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    // Add shine effect to ball
+    const gradient = ctx.createRadialGradient(
+        ball.x - ball.radius/3, 
+        ball.y - ball.radius/3, 
+        ball.radius/4,
+        ball.x, 
+        ball.y, 
+        ball.radius
+    );
+    gradient.addColorStop(0, '#FFFFFF');
+    gradient.addColorStop(1, '#4834D4');
+    ctx.fillStyle = gradient;
     ctx.fill();
     ctx.closePath();
 }
@@ -123,8 +150,25 @@ function drawBall() {
 function drawPaddle() {
     ctx.beginPath();
     ctx.rect(paddle.x, paddle.y, paddle.width, paddle.height);
-    ctx.fillStyle = '#0095DD';
+    ctx.fillStyle = '#4834D4';
     ctx.fill();
+    // Add 3D effect to paddle
+    ctx.beginPath();
+    ctx.moveTo(paddle.x, paddle.y + paddle.height);
+    ctx.lineTo(paddle.x, paddle.y);
+    ctx.lineTo(paddle.x + paddle.width, paddle.y);
+    ctx.strokeStyle = '#FFFFFF80';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
+    
+    ctx.beginPath();
+    ctx.moveTo(paddle.x + paddle.width, paddle.y);
+    ctx.lineTo(paddle.x + paddle.width, paddle.y + paddle.height);
+    ctx.lineTo(paddle.x, paddle.y + paddle.height);
+    ctx.strokeStyle = '#00000040';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.closePath();
 }
 
@@ -136,10 +180,32 @@ function drawBricks() {
                 const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
                 bricks[c][r].x = brickX;
                 bricks[c][r].y = brickY;
+
+                // Main brick body
                 ctx.beginPath();
                 ctx.rect(brickX, brickY, brickWidth, brickHeight);
-                ctx.fillStyle = '#0095DD';
+                ctx.fillStyle = bricks[c][r].color;
                 ctx.fill();
+                ctx.closePath();
+
+                // 3D effect - lighter top and left edges
+                ctx.beginPath();
+                ctx.moveTo(brickX, brickY + brickHeight);
+                ctx.lineTo(brickX, brickY);
+                ctx.lineTo(brickX + brickWidth, brickY);
+                ctx.strokeStyle = '#FFFFFF80';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.closePath();
+
+                // 3D effect - darker bottom and right edges
+                ctx.beginPath();
+                ctx.moveTo(brickX + brickWidth, brickY);
+                ctx.lineTo(brickX + brickWidth, brickY + brickHeight);
+                ctx.lineTo(brickX, brickY + brickHeight);
+                ctx.strokeStyle = '#00000040';
+                ctx.lineWidth = 2;
+                ctx.stroke();
                 ctx.closePath();
             }
         }
@@ -147,10 +213,85 @@ function drawBricks() {
 }
 
 function drawLives() {
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#0095DD';
-    ctx.fillText('Lives: ' + lives, canvas.width - 65, 20);
+    const heartSize = 20;
+    const startX = canvas.width - (heartSize * 4);
+    const startY = 20;
+    
+    for (let i = 0; i < lives; i++) {
+        ctx.beginPath();
+        const x = startX + (heartSize * i * 1.2);
+        // Draw heart shape
+        ctx.moveTo(x + heartSize/2, startY + heartSize/4);
+        ctx.bezierCurveTo(
+            x + heartSize/2, startY, 
+            x, startY, 
+            x, startY + heartSize/4
+        );
+        ctx.bezierCurveTo(
+            x, startY + heartSize/2, 
+            x + heartSize/2, startY + heartSize * 0.75, 
+            x + heartSize/2, startY + heartSize
+        );
+        ctx.bezierCurveTo(
+            x + heartSize/2, startY + heartSize * 0.75, 
+            x + heartSize, startY + heartSize/2, 
+            x + heartSize, startY + heartSize/4
+        );
+        ctx.bezierCurveTo(
+            x + heartSize, startY, 
+            x + heartSize/2, startY, 
+            x + heartSize/2, startY + heartSize/4
+        );
+        ctx.fillStyle = '#FF6B6B';
+        ctx.fill();
+        ctx.closePath();
+    }
 }
+
+function drawGameOver() {
+    ctx.font = 'bold 48px Courier New';
+    ctx.textAlign = 'center';
+    
+    // Shadow effect
+    ctx.fillStyle = '#FF0000';
+    for(let i = 0; i < 5; i++) {
+        ctx.fillText('GAME OVER', canvas.width/2 + i, canvas.height/2 + i);
+    }
+    
+    // Main text
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2);
+    
+    // Blinking "Press SPACE to restart" text
+    if(Math.floor(Date.now() / 500) % 2 === 0) {
+        ctx.font = '20px Courier New';
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillText('PRESS SPACE TO RESTART', canvas.width/2, canvas.height/2 + 50);
+    }
+}
+
+function drawWin() {
+    ctx.font = 'bold 48px Courier New';
+    ctx.textAlign = 'center';
+    
+    // Rainbow effect
+    const hue = (Date.now() / 50) % 360;
+    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.fillText('YOU WIN!', canvas.width/2, canvas.height/2);
+    
+    if(Math.floor(Date.now() / 500) % 2 === 0) {
+        ctx.font = '20px Courier New';
+        ctx.fillStyle = '#FFFF00';
+        ctx.fillText('PRESS SPACE TO RESTART', canvas.width/2, canvas.height/2 + 50);
+    }
+}
+
+// Add space bar listener for restart
+document.addEventListener('keydown', function(e) {
+    if((gameOver || gameWon) && e.code === 'Space') {
+        document.location.reload();
+    }
+});
 
 function draw() {
     // Clear canvas
@@ -201,16 +342,12 @@ function draw() {
 
     // Game over or won
     if (gameOver) {
-        ctx.font = '48px Arial';
-        ctx.fillStyle = '#FF0000';
-        ctx.fillText('GAME OVER', canvas.width/2 - 100, canvas.height/2);
+        drawGameOver();
         return;
     }
 
     if (gameWon) {
-        ctx.font = '48px Arial';
-        ctx.fillStyle = '#00FF00';
-        ctx.fillText('YOU WIN!', canvas.width/2 - 100, canvas.height/2);
+        drawWin();
         return;
     }
 

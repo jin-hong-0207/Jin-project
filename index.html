@@ -27,7 +27,15 @@
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas" width="480" height="320"></canvas>
+    
+    <!-- Add music controls -->
+    <div id="musicControls" style="text-align: center; margin: 10px;">
+        <input type="file" id="musicUpload" accept="audio/*" style="display: none;">
+        <button id="uploadButton" style="padding: 8px 15px; margin: 5px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Upload Music</button>
+        <button id="toggleMusic" style="padding: 8px 15px; margin: 5px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Toggle Music (M)</button>
+        <div id="musicStatus" style="margin-top: 5px; color: #666;"></div>
+    </div>
     
     <script src="game.js"></script>
 </body>

@@ -62,129 +62,66 @@ const levelConfigs = {
     }
 };
 
-// Audio Context setup
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
-
 // Background Music System
-const retroMusic = {
-    isPlaying: false,
-    tempo: 180, // Beats per minute
-    notes: [
-        // Main theme (Mario-like melody)
-        { frequency: 330, duration: 0.25 }, // E4
-        { frequency: 330, duration: 0.25 }, // E4
-        { frequency: 330, duration: 0.25 }, // E4
-        { frequency: 262, duration: 0.25 }, // C4
-        { frequency: 330, duration: 0.25 }, // E4
-        { frequency: 392, duration: 0.5 },  // G4
-        { frequency: 196, duration: 0.5 },  // G3
-        
-        { frequency: 262, duration: 0.25 }, // C4
-        { frequency: 196, duration: 0.25 }, // G3
-        { frequency: 164, duration: 0.25 }, // E3
-        { frequency: 220, duration: 0.25 }, // A3
-        { frequency: 246, duration: 0.25 }, // B3
-        { frequency: 233, duration: 0.5 },  // Bb3
-        { frequency: 220, duration: 0.5 },  // A3
-        
-        { frequency: 196, duration: 0.25 }, // G3
-        { frequency: 262, duration: 0.25 }, // C4
-        { frequency: 330, duration: 0.25 }, // E4
-        { frequency: 352, duration: 0.25 }, // F4
-        { frequency: 392, duration: 0.5 },  // G4
-        { frequency: 440, duration: 0.5 },  // A4
-    ],
-    currentNoteIndex: 0,
-    lastNotePlayed: 0,
-    lastDrumBeat: 0,
-    drumInterval: 0.25 // Quarter notes for drum beats
-};
+let backgroundMusic = null;
+let musicStatus = document.getElementById('musicStatus');
+let uploadButton = document.getElementById('uploadButton');
+let musicUpload = document.getElementById('musicUpload');
+let toggleMusicButton = document.getElementById('toggleMusic');
 
-function createMusicOscillator(frequency, type = 'square') {
-    const osc = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    const filter = audioCtx.createBiquadFilter();
-    
-    osc.type = type;
-    osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-    
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(2000, audioCtx.currentTime);
-    
-    osc.connect(filter);
-    filter.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    return { oscillator: osc, gainNode: gainNode };
-}
+// Set up music upload handling
+uploadButton.addEventListener('click', () => {
+    musicUpload.click();
+});
 
-function playDrumBeat(time) {
-    // Kick drum
-    const kick = createMusicOscillator(60, 'square');
-    kick.gainNode.gain.setValueAtTime(0.3, time);
-    kick.gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-    kick.oscillator.frequency.setValueAtTime(60, time);
-    kick.oscillator.frequency.exponentialRampToValueAtTime(30, time + 0.1);
-    kick.oscillator.start(time);
-    kick.oscillator.stop(time + 0.1);
+musicUpload.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        // Stop current music if playing
+        if (backgroundMusic) {
+            backgroundMusic.pause();
+            backgroundMusic = null;
+        }
 
-    // Hi-hat
-    const hihat = createMusicOscillator(2000, 'square');
-    hihat.gainNode.gain.setValueAtTime(0.1, time);
-    hihat.gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
-    hihat.oscillator.start(time);
-    hihat.oscillator.stop(time + 0.05);
-}
+        // Create URL for the uploaded file
+        const musicUrl = URL.createObjectURL(file);
+        backgroundMusic = new Audio(musicUrl);
+        backgroundMusic.loop = true;
+        backgroundMusic.volume = 0.3;
 
-function playRetroMusic() {
-    if (!retroMusic.isPlaying) return;
-    
-    const currentTime = audioCtx.currentTime;
-    
-    // Play melody and bass
-    if (currentTime - retroMusic.lastNotePlayed >= retroMusic.notes[retroMusic.currentNoteIndex].duration) {
-        const note = retroMusic.notes[retroMusic.currentNoteIndex];
+        musicStatus.textContent = `Music loaded: ${file.name}`;
         
-        // Main melody
-        const { oscillator: melodyOsc, gainNode: melodyGain } = createMusicOscillator(note.frequency, 'square');
-        melodyGain.gain.setValueAtTime(0.2, currentTime);
-        melodyOsc.start(currentTime);
-        melodyOsc.stop(currentTime + note.duration);
-        
-        // Bass line (one octave lower)
-        const { oscillator: bassOsc, gainNode: bassGain } = createMusicOscillator(note.frequency / 2, 'triangle');
-        bassGain.gain.setValueAtTime(0.15, currentTime);
-        bassOsc.start(currentTime);
-        bassOsc.stop(currentTime + note.duration);
-        
-        retroMusic.lastNotePlayed = currentTime;
-        retroMusic.currentNoteIndex = (retroMusic.currentNoteIndex + 1) % retroMusic.notes.length;
+        // Auto-play the music
+        toggleBackgroundMusic();
     }
-    
-    // Play drum beats
-    if (currentTime - retroMusic.lastDrumBeat >= retroMusic.drumInterval) {
-        playDrumBeat(currentTime);
-        retroMusic.lastDrumBeat = currentTime;
-    }
-}
+});
+
+toggleMusicButton.addEventListener('click', toggleBackgroundMusic);
 
 function toggleBackgroundMusic() {
-    console.log('Toggling music, current state:', retroMusic.isPlaying);
-    retroMusic.isPlaying = !retroMusic.isPlaying;
-    if (retroMusic.isPlaying) {
+    if (!backgroundMusic) {
+        musicStatus.textContent = 'Please upload a music file first';
+        return;
+    }
+    
+    if (backgroundMusic.paused) {
         console.log('Starting music...');
-        audioCtx.resume().then(() => {
-            console.log('Audio context resumed:', audioCtx.state);
-            retroMusic.lastNotePlayed = audioCtx.currentTime;
-            retroMusic.lastDrumBeat = audioCtx.currentTime;
+        backgroundMusic.play().catch(error => {
+            console.log('Error playing music:', error);
+            musicStatus.textContent = 'Error playing music. Click to try again.';
         });
+        musicStatus.textContent = 'Music: Playing';
+        toggleMusicButton.textContent = 'Pause Music (M)';
     } else {
         console.log('Stopping music...');
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+        musicStatus.textContent = 'Music: Paused';
+        toggleMusicButton.textContent = 'Play Music (M)';
     }
 }
 
-// Add event listener for music toggle
+// Keep the 'M' key functionality
 document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'm') {
         console.log('Music toggle pressed');
@@ -681,7 +618,6 @@ function draw() {
         updatePaddlePosition(deltaTime);
         updateBallPosition(deltaTime);
         collisionDetection();
-        playRetroMusic(); // Add this line to update music
     }
     
     // Draw messages
@@ -911,7 +847,6 @@ function gameLoop(currentTime) {
         updatePaddlePosition(deltaTime);
         updateBallPosition(deltaTime);
         collisionDetection();
-        playRetroMusic(); // Add this line to update music
     }
     
     // Draw messages

@@ -860,5 +860,3 @@ function gameLoop(currentTime) {
     
     requestAnimationFrame(gameLoop);
 }
-
-gameLoop(performance.now());

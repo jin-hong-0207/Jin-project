@@ -1,53 +1,48 @@
 # Breakout Game
 
-A classic Breakout-style game implemented in JavaScript using HTML5 Canvas with retro-inspired graphics and sound effects.
+A retro-style Breakout game built with HTML5 Canvas and JavaScript.
 
 ## Features
-- Classic paddle and ball gameplay
-- Multiple levels with increasing difficulty
-- Retro-style graphics and animations
-- 8-bit sound effects using Web Audio API
-- 3-life system with heart display
-- Progressive level system
-- Smooth animations and controls
-- Keyboard and mouse control options
 
-## Game Mechanics
-- Break all bricks to advance to the next level
-- Each level features different brick patterns
-- Ball speed increases with each level
-- Paddle reflects ball at different angles based on hit position
-
-## Sound Effects
-- Game start melody
-- Paddle hits
-- Brick breaks
-- Wall collisions
-- Level completion
-- Life lost
-- Game over
-
-## Controls
-- Left Arrow / Mouse Move: Move paddle left
-- Right Arrow / Mouse Move: Move paddle right
-- Space: Restart game (after game over)
+- Classic Breakout gameplay with modern touches
+- Infinite level progression
+- High score tracking
+- Background music and sound effects
+- Settings menu for audio controls
+- Retro-styled UI
 
 ## How to Play
-1. Open `index.html` in your web browser
-2. Use left/right arrow keys or mouse to move the paddle
-3. Break all bricks to advance to the next level
-4. Complete all levels to win
-5. You have 3 lives to complete the game
 
-## Technical Details
-- Built with vanilla JavaScript
-- Uses HTML5 Canvas for rendering
-- Web Audio API for sound synthesis
-- Responsive game loop with delta time
-- No external dependencies
+1. Clone the repository
+2. Install Flask: `pip install flask`
+3. Run the server: `python server.py`
+4. Open `http://localhost:8080` in your browser
+5. Use left/right arrow keys to move the paddle
+6. Break all bricks to advance to the next level
+7. Try to get the highest score!
+
+## Controls
+
+- Left Arrow: Move paddle left
+- Right Arrow: Move paddle right
+- Settings button: Toggle music and sound effects
 
 ## Development
-To run the game locally:
-1. Clone the repository
-2. Start a local server (e.g., `python -m http.server`)
-3. Open `localhost:8000` in your browser
+
+Built with:
+- HTML5 Canvas
+- JavaScript
+- Flask (Python)
+- Local Storage for game state
+
+## Setup
+
+```bash
+# Install dependencies
+pip install flask
+
+# Run the server
+python server.py
+
+# Access the game
+Open http://localhost:8080 in your browser

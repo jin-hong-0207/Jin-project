@@ -3,31 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro Breakout</title>
+    <title>Breakout Game</title>
     <style>
         body {
             margin: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Press Start 2P', Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: #1a1a1a;
-            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
         }
-        canvas {
-            border: 4px solid #333;
-            background: #000000;
-            border-radius: 4px;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
-                       inset 0 0 20px rgba(0, 0, 0, 0.3);
+
+        .container {
+            text-align: center;
+            position: relative;
         }
-        .hidden {
+
+        .title {
+            font-size: 48px;
+            color: #ff6b6b;
+            text-shadow: 0 0 10px #ff0000;
+            margin-bottom: 40px;
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+
+        .menu-button {
+            background: none;
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 15px 30px;
+            font-size: 20px;
+            margin: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            width: 200px;
+        }
+
+        .menu-button:hover {
+            background-color: #ff6b6b;
+            color: #000;
+            transform: scale(1.1);
+        }
+
+        .high-scores {
+            margin: 20px auto;
+            background-color: rgba(255, 107, 107, 0.1);
+            padding: 20px;
+            border: 1px solid #ff6b6b;
+            max-width: 300px;
+        }
+
+        .settings-modal {
             display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border: 2px solid #ff6b6b;
+            z-index: 1000;
+        }
+
+        .settings-modal.active {
+            display: block;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+
+        .modal-overlay.active {
+            display: block;
+        }
+
+        .setting-item {
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #333;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #ff6b6b;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #ff6b6b;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+            background-color: #fff;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px #ff0000;
+            }
+            to {
+                text-shadow: 0 0 20px #ff0000, 0 0 30px #ff0000;
+            }
         }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas" width="480" height="320"></canvas>
-    <script src="game.js"></script>
+    <div class="container">
+        <h1 class="title">BREAKOUT</h1>
+        <div class="high-scores">
+            <h2>High Scores</h2>
+            <p>Highest Score: <span id="highScore">0</span></p>
+            <p>Highest Level: <span id="highLevel">1</span></p>
+        </div>
+        <button class="menu-button" id="playButton">PLAY</button>
+        <button class="menu-button" id="settingsButton">SETTINGS</button>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="settings-modal" id="settingsModal">
+        <h2>Settings</h2>
+        <div class="setting-item">
+            <span>Background Music</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="bgmToggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="setting-item">
+            <span>Sound Effects</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="sfxToggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <button class="menu-button" id="closeSettings">Close</button>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="assets/background-music.mp3" type="audio/mp3">
+    </audio>
+
+    <script>
+        // Load saved settings
+        const bgmToggle = document.getElementById('bgmToggle');
+        const sfxToggle = document.getElementById('sfxToggle');
+        const bgMusic = document.getElementById('bgMusic');
+        
+        // Initialize settings from localStorage
+        bgmToggle.checked = localStorage.getItem('bgmEnabled') !== 'false';
+        sfxToggle.checked = localStorage.getItem('sfxEnabled') !== 'false';
+
+        // Update high scores from localStorage
+        document.getElementById('highScore').textContent = localStorage.getItem('breakoutHighScore') || '0';
+        document.getElementById('highLevel').textContent = localStorage.getItem('breakoutHighLevel') || '1';
+
+        // Settings modal controls
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsModal = document.getElementById('settingsModal');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const closeSettings = document.getElementById('closeSettings');
+
+        settingsButton.addEventListener('click', () => {
+            settingsModal.classList.add('active');
+            modalOverlay.classList.add('active');
+        });
+
+        closeSettings.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+            modalOverlay.classList.remove('active');
+        });
+
+        modalOverlay.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+            modalOverlay.classList.remove('active');
+        });
+
+        // Settings controls
+        bgmToggle.addEventListener('change', () => {
+            localStorage.setItem('bgmEnabled', bgmToggle.checked);
+            if (bgmToggle.checked) {
+                bgMusic.play();
+            } else {
+                bgMusic.pause();
+            }
+        });
+
+        sfxToggle.addEventListener('change', () => {
+            localStorage.setItem('sfxEnabled', sfxToggle.checked);
+        });
+
+        // Play button
+        document.getElementById('playButton').addEventListener('click', () => {
+            window.location.href = 'game.html';
+        });
+
+        // Start background music if enabled
+        if (bgmToggle.checked) {
+            bgMusic.play().catch(() => {
+                // Autoplay failed, user needs to interact first
+                console.log('Autoplay prevented - waiting for user interaction');
+            });
+        }
+    </script>
 </body>
 </html>

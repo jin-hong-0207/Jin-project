@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout Game</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', Arial, sans-serif;
+        }
+        canvas {
+            border: 2px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="480" height="320"></canvas>
+    <audio id="bgMusic" loop>
+        <source src="assets/background-music.mp3" type="audio/mp3">
+    </audio>
+    <script src="game.js"></script>
+</body>
+</html>

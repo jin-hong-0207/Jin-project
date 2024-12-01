@@ -10,24 +10,33 @@ canvas.height = 600;
 // Game object dimensions
 const paddleWidth = 100;
 const paddleHeight = 10;
-const ballRadius = 3;  // Smaller ball
-const brickRowCount = 15;  // Increased rows
-const brickColumnCount = 70;  // Increased to fill width
-const brickWidth = 10;  // Half size square bricks
-const brickHeight = 10; // Same as width for square shape
-const brickPadding = 1;      // Reduced padding
-const brickOffsetTop = 30;
+const ballRadius = 3;        // Reduced ball size to 3px radius
+const brickRowCount = 13;    // Keep 13 rows
+const brickColumnCount = 70; // Keep width-filling columns
+const brickWidth = 10;      // Keep original small square bricks
+const brickHeight = 10;     // Keep original square shape
+const brickPadding = 1;     // Keep original padding
+const brickOffsetTop = 80;  // Keep bricks moved down
 const brickOffsetLeft = (canvas.width - (brickColumnCount * (brickWidth + brickPadding))) / 2;
 
 // Game state
 let lives = 3;
 let gameOver = false;
-let gameWon = false;
 let currentLevel = 1;
-let maxLevel = 3;
+let score = 0;
+let highScore = localStorage.getItem('breakoutHighScore') || 0;
 let showLevelAnimation = true;
 let levelAnimationStart = Date.now();
 const levelAnimationDuration = 2000; // 2 seconds
+
+// Audio settings
+const bgMusic = document.getElementById('bgMusic');
+const bgmEnabled = localStorage.getItem('bgmEnabled') !== 'false';
+const sfxEnabled = localStorage.getItem('sfxEnabled') !== 'false';
+
+// Add score display
+let gameWon = false;
+let maxLevel = 3;
 
 // Retro color palette
 const retroColors = [
@@ -62,85 +71,13 @@ const levelConfigs = {
     }
 };
 
-// Audio Context for sound effects
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
-
-// Background Music System
-let backgroundMusic = new Audio('background.mp3');
-backgroundMusic.loop = true;
-backgroundMusic.volume = 0.3;
-
-// Sound Effects System
-function playSound(type) {
-    // Make sure audio context is running
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    switch(type) {
-        case 'paddleHit':
-            createAndPlayOscillator(200, 'square', 0.1);
-            break;
-        case 'wallHit':
-            createAndPlayOscillator(150, 'square', 0.1);
-            break;
-        case 'brickBreak':
-            createAndPlayOscillator(300, 'square', 0.1);
-            break;
-        case 'gameOver':
-            createAndPlayOscillator(100, 'square', 0.3);
-            setTimeout(() => createAndPlayOscillator(80, 'square', 0.3), 200);
-            break;
-        case 'gameStart':
-            createAndPlayOscillator(220, 'square', 0.2);
-            setTimeout(() => createAndPlayOscillator(440, 'square', 0.2), 100);
-            break;
-    }
+function playSound(soundName) {
+    if (!sfxEnabled) return;
+    
+    // Create and play the sound
+    const sound = new Audio(`assets/${soundName}.mp3`);
+    sound.play().catch(error => console.log('Error playing sound:', error));
 }
-
-function createAndPlayOscillator(frequency, type, duration) {
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-    
-    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + duration);
-}
-
-// Add event listener for music toggle
-document.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'm') {
-        toggleBackgroundMusic();
-    }
-});
-
-function toggleBackgroundMusic() {
-    if (backgroundMusic.paused) {
-        backgroundMusic.play().catch(error => {
-            console.log('Error playing music:', error);
-        });
-    } else {
-        backgroundMusic.pause();
-        backgroundMusic.currentTime = 0;
-    }
-}
-
-// Start music when game starts
-window.addEventListener('load', () => {
-    // Try to play music (browsers might block autoplay)
-    backgroundMusic.play().catch(error => {
-        console.log('Autoplay prevented. Press M to start music.');
-    });
-});
 
 // Create bricks based on level pattern
 function createBricks(level) {
@@ -309,6 +246,7 @@ function collisionDetection() {
                     }
                     
                     playSound('brickBreak');
+                    score++;
                     
                     return;  // Exit after breaking one brick
                 }
@@ -394,6 +332,7 @@ function draw() {
     drawBall();
     drawLives();
     drawLevelDisplay();
+    drawScore();
     
     // Update game state if not game over
     if (!gameOver && !gameWon) {
@@ -404,7 +343,8 @@ function draw() {
     
     // Draw messages
     if (gameOver) {
-        drawGameOver();
+        handleGameOver();
+        return;
     } else if (gameWon) {
         drawGameWon();
     } else {
@@ -413,6 +353,16 @@ function draw() {
     
     // Request next frame
     animationFrameId = requestAnimationFrame(draw);
+}
+
+function drawScore() {
+    ctx.font = '20px Arial';
+    ctx.fillStyle = '#FFF';
+    ctx.textAlign = 'left';
+    ctx.fillText('Score: ' + score, 8, 30);
+    ctx.fillText('High Score: ' + highScore, 8, 55);
+    ctx.textAlign = 'right';
+    ctx.fillText('Level: ' + currentLevel, canvas.width - 8, 30);
 }
 
 function drawLevelDisplay() {
@@ -562,6 +512,68 @@ function drawBall() {
     ctx.closePath();
 }
 
+function gameLoop(currentTime) {
+    if (bgmEnabled && bgMusic.paused) {
+        bgMusic.play().catch(error => console.log('Error playing background music:', error));
+    }
+    
+    const deltaTime = (currentTime - lastTime) / 16;
+    lastTime = currentTime;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw game elements
+    drawBricks();
+    drawBall();
+    drawPaddle();
+    drawLives();
+    drawLevelDisplay();
+    drawScore();
+    
+    // Update game state if not game over
+    if (!gameOver && !gameWon) {
+        updatePaddlePosition(deltaTime);
+        updateBallPosition(deltaTime);
+        collisionDetection();
+    }
+    
+    // Draw messages
+    if (gameOver) {
+        handleGameOver();
+        return;
+    } else if (gameWon) {
+        drawGameWon();
+    } else {
+        drawLevelStart();
+    }
+    
+    requestAnimationFrame(gameLoop);
+}
+
+function handleGameOver() {
+    // Update high score if needed
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('breakoutHighScore', highScore);
+    }
+    
+    // Update highest level
+    const currentHighLevel = localStorage.getItem('breakoutHighLevel') || 1;
+    if (currentLevel > currentHighLevel) {
+        localStorage.setItem('breakoutHighLevel', currentLevel);
+    }
+    
+    // Stop background music
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    
+    // Return to menu after a short delay
+    setTimeout(() => {
+        window.location.href = 'index.html';
+    }, 3000);
+}
+
 let lastTime = 0;
 let animationFrameId;
 
@@ -601,39 +613,6 @@ levelAnimationStart = Date.now();
 // Start the game
 startGame();
 playSound('gameStart');  // Play start sound
-
-function gameLoop(currentTime) {
-    const deltaTime = (currentTime - lastTime) / 16;
-    lastTime = currentTime;
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw game elements
-    drawBricks();
-    drawBall();
-    drawPaddle();
-    drawLives();
-    drawLevelDisplay();
-    
-    // Update game state if not game over
-    if (!gameOver && !gameWon) {
-        updatePaddlePosition(deltaTime);
-        updateBallPosition(deltaTime);
-        collisionDetection();
-    }
-    
-    // Draw messages
-    if (gameOver) {
-        drawGameOver();
-    } else if (gameWon) {
-        drawGameWon();
-    } else {
-        drawLevelStart();
-    }
-    
-    requestAnimationFrame(gameLoop);
-}
 
 // Start the game loop
 gameLoop(performance.now());

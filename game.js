@@ -62,9 +62,146 @@ const levelConfigs = {
     }
 };
 
-// Audio Context
+// Audio Context setup
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioContext();
+
+// Background Music System
+const retroMusic = {
+    isPlaying: false,
+    tempo: 180, // Beats per minute
+    notes: [
+        // Main theme (Mario-like melody)
+        { frequency: 330, duration: 0.25 }, // E4
+        { frequency: 330, duration: 0.25 }, // E4
+        { frequency: 330, duration: 0.25 }, // E4
+        { frequency: 262, duration: 0.25 }, // C4
+        { frequency: 330, duration: 0.25 }, // E4
+        { frequency: 392, duration: 0.5 },  // G4
+        { frequency: 196, duration: 0.5 },  // G3
+        
+        { frequency: 262, duration: 0.25 }, // C4
+        { frequency: 196, duration: 0.25 }, // G3
+        { frequency: 164, duration: 0.25 }, // E3
+        { frequency: 220, duration: 0.25 }, // A3
+        { frequency: 246, duration: 0.25 }, // B3
+        { frequency: 233, duration: 0.5 },  // Bb3
+        { frequency: 220, duration: 0.5 },  // A3
+        
+        { frequency: 196, duration: 0.25 }, // G3
+        { frequency: 262, duration: 0.25 }, // C4
+        { frequency: 330, duration: 0.25 }, // E4
+        { frequency: 352, duration: 0.25 }, // F4
+        { frequency: 392, duration: 0.5 },  // G4
+        { frequency: 440, duration: 0.5 },  // A4
+    ],
+    currentNoteIndex: 0,
+    lastNotePlayed: 0,
+    lastDrumBeat: 0,
+    drumInterval: 0.25 // Quarter notes for drum beats
+};
+
+function createMusicOscillator(frequency, type = 'square') {
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2000, audioCtx.currentTime);
+    
+    osc.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    return { oscillator: osc, gainNode: gainNode };
+}
+
+function playDrumBeat(time) {
+    // Kick drum
+    const kick = createMusicOscillator(60, 'square');
+    kick.gainNode.gain.setValueAtTime(0.3, time);
+    kick.gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+    kick.oscillator.frequency.setValueAtTime(60, time);
+    kick.oscillator.frequency.exponentialRampToValueAtTime(30, time + 0.1);
+    kick.oscillator.start(time);
+    kick.oscillator.stop(time + 0.1);
+
+    // Hi-hat
+    const hihat = createMusicOscillator(2000, 'square');
+    hihat.gainNode.gain.setValueAtTime(0.1, time);
+    hihat.gainNode.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+    hihat.oscillator.start(time);
+    hihat.oscillator.stop(time + 0.05);
+}
+
+function playRetroMusic() {
+    if (!retroMusic.isPlaying) return;
+    
+    const currentTime = audioCtx.currentTime;
+    
+    // Play melody and bass
+    if (currentTime - retroMusic.lastNotePlayed >= retroMusic.notes[retroMusic.currentNoteIndex].duration) {
+        const note = retroMusic.notes[retroMusic.currentNoteIndex];
+        
+        // Main melody
+        const { oscillator: melodyOsc, gainNode: melodyGain } = createMusicOscillator(note.frequency, 'square');
+        melodyGain.gain.setValueAtTime(0.2, currentTime);
+        melodyOsc.start(currentTime);
+        melodyOsc.stop(currentTime + note.duration);
+        
+        // Bass line (one octave lower)
+        const { oscillator: bassOsc, gainNode: bassGain } = createMusicOscillator(note.frequency / 2, 'triangle');
+        bassGain.gain.setValueAtTime(0.15, currentTime);
+        bassOsc.start(currentTime);
+        bassOsc.stop(currentTime + note.duration);
+        
+        retroMusic.lastNotePlayed = currentTime;
+        retroMusic.currentNoteIndex = (retroMusic.currentNoteIndex + 1) % retroMusic.notes.length;
+    }
+    
+    // Play drum beats
+    if (currentTime - retroMusic.lastDrumBeat >= retroMusic.drumInterval) {
+        playDrumBeat(currentTime);
+        retroMusic.lastDrumBeat = currentTime;
+    }
+}
+
+function toggleBackgroundMusic() {
+    console.log('Toggling music, current state:', retroMusic.isPlaying);
+    retroMusic.isPlaying = !retroMusic.isPlaying;
+    if (retroMusic.isPlaying) {
+        console.log('Starting music...');
+        audioCtx.resume().then(() => {
+            console.log('Audio context resumed:', audioCtx.state);
+            retroMusic.lastNotePlayed = audioCtx.currentTime;
+            retroMusic.lastDrumBeat = audioCtx.currentTime;
+        });
+    } else {
+        console.log('Stopping music...');
+    }
+}
+
+// Add event listener for music toggle
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'm') {
+        console.log('Music toggle pressed');
+        toggleBackgroundMusic();
+    }
+});
+
+// Audio functions for sound effects
+function createOscillator(frequency, type = 'sine') {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    return { oscillator, gainNode };
+}
 
 // Retro sound generator
 const createRetroSound = {
@@ -544,6 +681,7 @@ function draw() {
         updatePaddlePosition(deltaTime);
         updateBallPosition(deltaTime);
         collisionDetection();
+        playRetroMusic(); // Add this line to update music
     }
     
     // Draw messages
@@ -753,3 +891,39 @@ function initGame() {
 }
 
 initGame();
+
+function gameLoop(currentTime) {
+    const deltaTime = (currentTime - lastTime) / 16;
+    lastTime = currentTime;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw game elements
+    drawBricks();
+    drawPaddle();
+    drawBall();
+    drawLives();
+    drawLevelDisplay();
+    
+    // Update game state if not game over
+    if (!gameOver && !gameWon) {
+        updatePaddlePosition(deltaTime);
+        updateBallPosition(deltaTime);
+        collisionDetection();
+        playRetroMusic(); // Add this line to update music
+    }
+    
+    // Draw messages
+    if (gameOver) {
+        drawGameOver();
+    } else if (gameWon) {
+        drawGameWon();
+    } else {
+        drawLevelStart();
+    }
+    
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop(performance.now());

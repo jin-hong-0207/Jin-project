@@ -62,10 +62,59 @@ const levelConfigs = {
     }
 };
 
+// Audio Context for sound effects
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
 // Background Music System
 let backgroundMusic = new Audio('background.mp3');
 backgroundMusic.loop = true;
 backgroundMusic.volume = 0.3;
+
+// Sound Effects System
+function playSound(type) {
+    // Make sure audio context is running
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+
+    switch(type) {
+        case 'paddleHit':
+            createAndPlayOscillator(200, 'square', 0.1);
+            break;
+        case 'wallHit':
+            createAndPlayOscillator(150, 'square', 0.1);
+            break;
+        case 'brickBreak':
+            createAndPlayOscillator(300, 'square', 0.1);
+            break;
+        case 'gameOver':
+            createAndPlayOscillator(100, 'square', 0.3);
+            setTimeout(() => createAndPlayOscillator(80, 'square', 0.3), 200);
+            break;
+        case 'gameStart':
+            createAndPlayOscillator(220, 'square', 0.2);
+            setTimeout(() => createAndPlayOscillator(440, 'square', 0.2), 100);
+            break;
+    }
+}
+
+function createAndPlayOscillator(frequency, type, duration) {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+    
+    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + duration);
+}
 
 // Add event listener for music toggle
 document.addEventListener('keydown', (e) => {
@@ -92,236 +141,6 @@ window.addEventListener('load', () => {
         console.log('Autoplay prevented. Press M to start music.');
     });
 });
-
-// Audio functions for sound effects
-function createOscillator(frequency, type = 'sine') {
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    return { oscillator, gainNode };
-}
-
-// Retro sound generator
-const createRetroSound = {
-    paddleHit: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
-        
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    },
-    
-    gameStart: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        
-        // Triumphant startup melody (C major arpeggio with extra notes)
-        const notes = [262, 330, 392, 523, 659, 523, 392, 523];  // C4, E4, G4, C5, E5, C5, G4, C5
-        const noteLength = 0.08;
-        
-        notes.forEach((freq, i) => {
-            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (i + 1) * noteLength);
-        });
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + notes.length * noteLength);
-    },
-
-    heartLost: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        
-        // Quick descending tone
-        oscillator.frequency.setValueAtTime(330, audioCtx.currentTime); // E4
-        oscillator.frequency.exponentialRampToValueAtTime(165, audioCtx.currentTime + 0.2); // E3
-        
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.2);
-    },
-
-    gameOver: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        
-        // Dramatic game over melody (minor scale descent)
-        const notes = [440, 392, 349, 330, 294, 262, 247, 220];  // A4 to A3 in A minor
-        const noteLength = 0.2;
-        
-        notes.forEach((freq, i) => {
-            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (i + 1) * noteLength);
-        });
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + notes.length * noteLength);
-    },
-    
-    brickHit: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(500, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
-        
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.05);
-    },
-    
-    wallHit: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-        
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    },
-    
-    levelUp: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        
-        // Play ascending notes
-        const notes = [300, 400, 500, 600];
-        const noteLength = 0.1;
-        
-        notes.forEach((freq, i) => {
-            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (i + 1) * noteLength);
-        });
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + notes.length * noteLength);
-    },
-    
-    loseLife: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
-        
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.3);
-    },
-
-    gameStart: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        
-        // Play a fun startup melody
-        const notes = [262, 330, 392, 523];  // C4, E4, G4, C5
-        const noteLength = 0.1;
-        
-        notes.forEach((freq, i) => {
-            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (i + 1) * noteLength);
-        });
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + notes.length * noteLength);
-    },
-
-    heartLost: () => {
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.type = 'square';
-        
-        // Play a sad heart lost sound
-        const notes = [440, 392, 349, 330];  // A4, G4, F4, E4
-        const noteLength = 0.15;
-        
-        notes.forEach((freq, i) => {
-            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime + i * noteLength);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (i + 1) * noteLength);
-        });
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + notes.length * noteLength);
-    }
-};
-
-// Function to play sound with retro effects
-function playSound(soundId) {
-    try {
-        createRetroSound[soundId]();
-    } catch (error) {
-        console.log('Audio play failed:', error);
-    }
-}
 
 // Create bricks based on level pattern
 function createBricks(level) {
@@ -489,7 +308,7 @@ function collisionDetection() {
                         gameWon = true;
                     }
                     
-                    playSound('brickHit');
+                    playSound('brickBreak');
                     
                     return;  // Exit after breaking one brick
                 }
@@ -529,10 +348,9 @@ function updateBallPosition(deltaTime) {
     // Bottom wall (lose life)
     if (nextY + ballRadius > canvas.height) {
         lives--;
-        playSound('heartLost');  // Play heart lost sound
+        playSound('gameOver');  // Play game over sound
         if (lives === 0) {
             gameOver = true;
-            playSound('gameOver');
         } else {
             resetBall();
         }

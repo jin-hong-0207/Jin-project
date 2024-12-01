@@ -63,70 +63,34 @@ const levelConfigs = {
 };
 
 // Background Music System
-let backgroundMusic = null;
-let musicStatus = document.getElementById('musicStatus');
-let uploadButton = document.getElementById('uploadButton');
-let musicUpload = document.getElementById('musicUpload');
-let toggleMusicButton = document.getElementById('toggleMusic');
+let backgroundMusic = new Audio('background.mp3');
+backgroundMusic.loop = true;
+backgroundMusic.volume = 0.3;
 
-// Set up music upload handling
-uploadButton.addEventListener('click', () => {
-    musicUpload.click();
-});
-
-musicUpload.addEventListener('change', (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        // Stop current music if playing
-        if (backgroundMusic) {
-            backgroundMusic.pause();
-            backgroundMusic = null;
-        }
-
-        // Create URL for the uploaded file
-        const musicUrl = URL.createObjectURL(file);
-        backgroundMusic = new Audio(musicUrl);
-        backgroundMusic.loop = true;
-        backgroundMusic.volume = 0.3;
-
-        musicStatus.textContent = `Music loaded: ${file.name}`;
-        
-        // Auto-play the music
+// Add event listener for music toggle
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'm') {
         toggleBackgroundMusic();
     }
 });
 
-toggleMusicButton.addEventListener('click', toggleBackgroundMusic);
-
 function toggleBackgroundMusic() {
-    if (!backgroundMusic) {
-        musicStatus.textContent = 'Please upload a music file first';
-        return;
-    }
-    
     if (backgroundMusic.paused) {
-        console.log('Starting music...');
         backgroundMusic.play().catch(error => {
             console.log('Error playing music:', error);
-            musicStatus.textContent = 'Error playing music. Click to try again.';
         });
-        musicStatus.textContent = 'Music: Playing';
-        toggleMusicButton.textContent = 'Pause Music (M)';
     } else {
-        console.log('Stopping music...');
         backgroundMusic.pause();
         backgroundMusic.currentTime = 0;
-        musicStatus.textContent = 'Music: Paused';
-        toggleMusicButton.textContent = 'Play Music (M)';
     }
 }
 
-// Keep the 'M' key functionality
-document.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'm') {
-        console.log('Music toggle pressed');
-        toggleBackgroundMusic();
-    }
+// Start music when game starts
+window.addEventListener('load', () => {
+    // Try to play music (browsers might block autoplay)
+    backgroundMusic.play().catch(error => {
+        console.log('Autoplay prevented. Press M to start music.');
+    });
 });
 
 // Audio functions for sound effects
@@ -820,14 +784,6 @@ levelAnimationStart = Date.now();
 startGame();
 playSound('gameStart');  // Play start sound
 
-function initGame() {
-    lastTime = performance.now();
-    playSound('gameStart');  // Play start sound when game initializes
-    draw();
-}
-
-initGame();
-
 function gameLoop(currentTime) {
     const deltaTime = (currentTime - lastTime) / 16;
     lastTime = currentTime;
@@ -837,8 +793,8 @@ function gameLoop(currentTime) {
     
     // Draw game elements
     drawBricks();
-    drawPaddle();
     drawBall();
+    drawPaddle();
     drawLives();
     drawLevelDisplay();
     
@@ -860,3 +816,6 @@ function gameLoop(currentTime) {
     
     requestAnimationFrame(gameLoop);
 }
+
+// Start the game loop
+gameLoop(performance.now());

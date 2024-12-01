@@ -74,9 +74,31 @@ const levelConfigs = {
 function playSound(soundName) {
     if (!sfxEnabled) return;
     
-    // Create and play the sound
-    const sound = new Audio(`assets/${soundName}.mp3`);
-    sound.play().catch(error => console.log('Error playing sound:', error));
+    try {
+        // Create and play the sound
+        const sound = new Audio(`sounds/${soundName}.mp3`);
+        sound.volume = 0.3; // Set volume to 30%
+        sound.play().catch(error => {
+            console.log('Error playing sound:', error);
+        });
+    } catch (error) {
+        console.log('Error creating audio:', error);
+    }
+}
+
+// Background music handling
+function toggleBackgroundMusic() {
+    const bgMusic = document.getElementById('bgMusic');
+    if (bgMusic) {
+        if (bgmEnabled) {
+            bgMusic.src = 'sounds/background.mp3';
+            bgMusic.loop = true;
+            bgMusic.volume = 0.2;
+            bgMusic.play().catch(error => console.log('Error playing background music:', error));
+        } else {
+            bgMusic.pause();
+        }
+    }
 }
 
 // Create bricks based on level pattern
@@ -182,8 +204,8 @@ const keys = {
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') keys.left = true;
     if (e.key === 'ArrowRight') keys.right = true;
-    if (e.key === 'Space' && (gameOver || gameWon)) {
-        document.location.reload();
+    if (e.code === 'Space' && (gameOver || gameWon)) {
+        window.location.href = '/index.html';
     }
 });
 
@@ -214,41 +236,33 @@ document.addEventListener('mousemove', (e) => {
 function collisionDetection() {
     for (let c = 0; c < brickColumnCount; c++) {
         for (let r = 0; r < brickRowCount; r++) {
-            const brick = bricks[c][r];
-            if (brick.status === 1) {
-                // Calculate the ball's position relative to the brick
-                const brickCenterX = brick.x + brickWidthHalf;
-                const brickCenterY = brick.y + brickHeightHalf;
-                const dx = Math.abs(ball.x - brickCenterX);
-                const dy = Math.abs(ball.y - brickCenterY);
+            let b = bricks[c][r];
+            if (b.status === 1) {
+                // Calculate distances between ball and brick
+                const distX = Math.abs(ball.x - (b.x + brickWidth/2));
+                const distY = Math.abs(ball.y - (b.y + brickHeight/2));
 
-                if (dx <= (brickWidthHalf + ballRadius) && 
-                    dy <= (brickHeightHalf + ballRadius)) {
-                    
+                // Check if ball is close enough for collision
+                if (distX <= (brickWidth/2 + ballRadius) && distY <= (brickHeight/2 + ballRadius)) {
                     // Determine which side of the brick was hit
-                    if (dx > brickWidthHalf) {
-                        // Hit on the left or right side
+                    if (distX >= distY) {
+                        // Hit was on left or right side
                         ball.dx = -ball.dx;
-                    } else if (dy > brickHeightHalf) {
-                        // Hit on the top or bottom
-                        ball.dy = -ball.dy;
                     } else {
-                        // Hit at a corner
-                        ball.dx = -ball.dx;
+                        // Hit was on top or bottom
                         ball.dy = -ball.dy;
                     }
                     
-                    brick.status = 0;  // Break this brick
-                    
-                    // Check if game is won
-                    if (checkLevelComplete()) {
-                        gameWon = true;
-                    }
-                    
-                    playSound('brickBreak');
+                    b.status = 0;
                     score++;
                     
-                    return;  // Exit after breaking one brick
+                    if (sfxEnabled) {
+                        playSound('brickBreak');
+                    }
+
+                    // Check if level is complete
+                    checkLevelComplete();
+                    return;
                 }
             }
         }
@@ -265,11 +279,11 @@ function updateBallPosition(deltaTime) {
     if (nextX + ballRadius > canvas.width) {
         ball.x = canvas.width - ballRadius;
         ball.dx = -Math.abs(ball.dx); // Ensure it bounces left
-        playSound('wallHit');
+        if (sfxEnabled) playSound('wallHit');
     } else if (nextX - ballRadius < 0) {
         ball.x = ballRadius;
         ball.dx = Math.abs(ball.dx); // Ensure it bounces right
-        playSound('wallHit');
+        if (sfxEnabled) playSound('wallHit');
     } else {
         ball.x = nextX;
     }
@@ -278,7 +292,7 @@ function updateBallPosition(deltaTime) {
     if (nextY - ballRadius < 0) {
         ball.y = ballRadius;
         ball.dy = Math.abs(ball.dy); // Ensure it bounces down
-        playSound('wallHit');
+        if (sfxEnabled) playSound('wallHit');
     } else {
         ball.y = nextY;
     }
@@ -286,9 +300,9 @@ function updateBallPosition(deltaTime) {
     // Bottom wall (lose life)
     if (nextY + ballRadius > canvas.height) {
         lives--;
-        playSound('gameOver');  // Play game over sound
+        if (sfxEnabled) playSound('gameOver');
         if (lives === 0) {
-            gameOver = true;
+            handleGameOver();
         } else {
             resetBall();
         }
@@ -314,7 +328,7 @@ function updateBallPosition(deltaTime) {
         
         // Ensure ball doesn't get stuck in paddle
         ball.y = paddle.y - ballRadius;
-        playSound('paddleHit');
+        if (sfxEnabled) playSound('paddleHit');
     }
 }
 
@@ -343,7 +357,7 @@ function draw() {
     
     // Draw messages
     if (gameOver) {
-        handleGameOver();
+        drawGameOver();
         return;
     } else if (gameWon) {
         drawGameWon();
@@ -402,7 +416,7 @@ function drawGameOver() {
     
     ctx.font = '24px "Press Start 2P", "Courier New", monospace';
     ctx.fillStyle = '#888';
-    ctx.fillText('Press SPACE to restart', canvas.width/2, canvas.height/2 + 40);
+    ctx.fillText('Click or Press SPACE to return', canvas.width/2, canvas.height/2 + 40);
 }
 
 function drawGameWon() {
@@ -413,7 +427,7 @@ function drawGameWon() {
     
     ctx.font = '24px "Press Start 2P", "Courier New", monospace';
     ctx.fillStyle = '#888';
-    ctx.fillText('Press SPACE to restart', canvas.width/2, canvas.height/2 + 40);
+    ctx.fillText('Click or Press SPACE to return', canvas.width/2, canvas.height/2 + 40);
 }
 
 function drawLevelStart() {
@@ -514,7 +528,7 @@ function drawBall() {
 
 function gameLoop(currentTime) {
     if (bgmEnabled && bgMusic.paused) {
-        bgMusic.play().catch(error => console.log('Error playing background music:', error));
+        toggleBackgroundMusic();
     }
     
     const deltaTime = (currentTime - lastTime) / 16;
@@ -540,8 +554,7 @@ function gameLoop(currentTime) {
     
     // Draw messages
     if (gameOver) {
-        handleGameOver();
-        return;
+        drawGameOver();
     } else if (gameWon) {
         drawGameWon();
     } else {
@@ -568,10 +581,8 @@ function handleGameOver() {
     bgMusic.pause();
     bgMusic.currentTime = 0;
     
-    // Return to menu after a short delay
-    setTimeout(() => {
-        window.location.href = 'index.html';
-    }, 3000);
+    // Set game over state
+    gameOver = true;
 }
 
 let lastTime = 0;
@@ -616,3 +627,10 @@ playSound('gameStart');  // Play start sound
 
 // Start the game loop
 gameLoop(performance.now());
+
+// Add click event listener for game over
+canvas.addEventListener('click', () => {
+    if (gameOver || gameWon) {
+        window.location.href = '/index.html';
+    }
+});

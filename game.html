@@ -4,25 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Breakout Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
-            background-color: #000;
+            background-color: #1a1f3c;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            font-family: 'Press Start 2P', Arial, sans-serif;
+            font-family: 'Press Start 2P', cursive;
         }
         canvas {
-            border: 2px solid #ff6b6b;
+            border: 2px solid #00f7ff;
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.3);
+            background-color: #000;
+            animation: canvasGlow 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes canvasGlow {
+            from {
+                box-shadow: 0 0 20px rgba(0, 247, 255, 0.3);
+            }
+            to {
+                box-shadow: 0 0 30px rgba(0, 247, 255, 0.5);
+            }
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* Game text styles (for score, level, etc.) */
+        .game-text {
+            color: #00f7ff;
+            text-shadow: 0 0 10px #00f7ff;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="480" height="320"></canvas>
     <audio id="bgMusic" loop>
-        <source src="assets/background-music.mp3" type="audio/mp3">
+        <source src="sounds/background.mp3" type="audio/mp3">
     </audio>
     <script src="game.js"></script>
 </body>

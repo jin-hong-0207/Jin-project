@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout - Settings</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1f3c;
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+            padding: 2rem;
+            background: rgba(28, 33, 64, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            min-width: 320px;
+        }
+
+        .title {
+            font-size: 32px;
+            color: #00f7ff;
+            text-shadow: 0 0 10px #00f7ff;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+        }
+
+        .settings-group {
+            margin: 30px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #00f7ff;
+            background: rgba(0, 247, 255, 0.1);
+        }
+
+        .setting-label {
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        .toggle-button {
+            background: transparent;
+            border: 2px solid #00f7ff;
+            color: #00f7ff;
+            padding: 10px 20px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-button:hover {
+            background: #00f7ff;
+            color: #1a1f3c;
+            transform: translateY(-2px);
+        }
+
+        .toggle-button.disabled {
+            opacity: 0.5;
+            border-color: #ff3939;
+            color: #ff3939;
+        }
+
+        .toggle-button.disabled:hover {
+            background: #ff3939;
+            color: #1a1f3c;
+        }
+
+        .back-button {
+            margin-top: 40px;
+            background: transparent;
+            border: 2px solid #00f7ff;
+            color: #00f7ff;
+            padding: 15px 30px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.3);
+        }
+
+        .back-button:hover {
+            background: #00f7ff;
+            color: #1a1f3c;
+            box-shadow: 0 0 20px rgba(0, 247, 255, 0.5);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">SETTINGS</h1>
+        <div class="settings-group">
+            <div class="setting-item">
+                <span class="setting-label">MUSIC</span>
+                <button id="bgmToggle" class="toggle-button">ON</button>
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">SOUND FX</span>
+                <button id="sfxToggle" class="toggle-button">ON</button>
+            </div>
+        </div>
+        <button class="back-button" onclick="window.location.href='index.html'">BACK</button>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="sounds/background.mp3" type="audio/mp3">
+    </audio>
+
+    <script>
+        const bgmToggle = document.getElementById('bgmToggle');
+        const sfxToggle = document.getElementById('sfxToggle');
+        const bgMusic = document.getElementById('bgMusic');
+
+        // Sound effect for button clicks
+        const buttonSound = new Audio('sounds/button_click.wav');
+        buttonSound.volume = 0.3;
+
+        function playButtonSound() {
+            if (localStorage.getItem('sfxEnabled') !== 'false') {
+                const soundClone = buttonSound.cloneNode();
+                soundClone.play().catch(console.error);
+            }
+        }
+
+        // Initialize toggle states
+        function updateToggleState(button, setting) {
+            const isEnabled = localStorage.getItem(setting) !== 'false';
+            button.textContent = isEnabled ? 'ON' : 'OFF';
+            button.classList.toggle('disabled', !isEnabled);
+        }
+
+        updateToggleState(bgmToggle, 'bgmEnabled');
+        updateToggleState(sfxToggle, 'sfxEnabled');
+
+        // Toggle handlers
+        bgmToggle.addEventListener('click', () => {
+            playButtonSound();
+            const isEnabled = bgmToggle.textContent === 'OFF';
+            localStorage.setItem('bgmEnabled', isEnabled);
+            updateToggleState(bgmToggle, 'bgmEnabled');
+            
+            if (isEnabled) {
+                bgMusic.play().catch(console.error);
+            } else {
+                bgMusic.pause();
+            }
+        });
+
+        sfxToggle.addEventListener('click', () => {
+            const isEnabled = sfxToggle.textContent === 'OFF';
+            // Play sound before disabling if turning off
+            if (!isEnabled) {
+                playButtonSound();
+            }
+            localStorage.setItem('sfxEnabled', isEnabled);
+            updateToggleState(sfxToggle, 'sfxEnabled');
+            // Play sound after enabling if turning on
+            if (isEnabled) {
+                playButtonSound();
+            }
+        });
+
+        // Add button sound to back button
+        document.querySelector('.back-button').addEventListener('click', () => {
+            playButtonSound();
+            // Small delay to allow sound to play before navigation
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 100);
+        });
+
+        // Start background music if enabled
+        if (localStorage.getItem('bgmEnabled') !== 'false') {
+            bgMusic.play().catch(() => {
+                console.log('Autoplay prevented - waiting for user interaction');
+            });
+        }
+    </script>
+</body>
+</html>

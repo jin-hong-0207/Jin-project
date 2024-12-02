@@ -30,9 +30,57 @@ let levelAnimationStart = Date.now();
 const levelAnimationDuration = 2000; // 2 seconds
 
 // Audio settings
+let sfxEnabled = localStorage.getItem('sfxEnabled') !== 'false';
+let bgmEnabled = localStorage.getItem('bgmEnabled') !== 'false';
 const bgMusic = document.getElementById('bgMusic');
-const bgmEnabled = localStorage.getItem('bgmEnabled') !== 'false';
-const sfxEnabled = localStorage.getItem('sfxEnabled') !== 'false';
+
+// Preload sound effects
+const soundEffects = {
+    paddle_hit: new Audio('sounds/paddle_hit.wav'),
+    wall_hit: new Audio('sounds/wall_hit.wav'),
+    brick_break: new Audio('sounds/brick_break.wav'),
+    game_over: new Audio('sounds/game_over.wav'),
+    game_start: new Audio('sounds/game_start.wav'),
+    button_click: new Audio('sounds/button_click.wav')
+};
+
+// Set volume for all sound effects
+Object.values(soundEffects).forEach(sound => {
+    sound.volume = 0.3;
+});
+
+function playSound(soundName) {
+    if (!sfxEnabled) return;
+    
+    try {
+        const sound = soundEffects[soundName];
+        if (sound) {
+            // Create a clone to allow overlapping sounds
+            const clone = sound.cloneNode();
+            clone.volume = 0.3;
+            clone.play().catch(error => {
+                console.log('Error playing sound:', error);
+            });
+        }
+    } catch (error) {
+        console.log('Error playing sound:', error);
+    }
+}
+
+// Background music handling
+function toggleBackgroundMusic() {
+    if (bgMusic) {
+        if (bgmEnabled) {
+            bgMusic.src = 'sounds/background.mp3';
+            bgMusic.loop = true;
+            bgMusic.volume = 0.2;
+            bgMusic.play().catch(error => console.log('Error playing background music:', error));
+        } else {
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+        }
+    }
+}
 
 // Add score display
 let gameWon = false;
@@ -70,36 +118,6 @@ const levelConfigs = {
         paddleSpeed: 10
     }
 };
-
-function playSound(soundName) {
-    if (!sfxEnabled) return;
-    
-    try {
-        // Create and play the sound
-        const sound = new Audio(`sounds/${soundName}.mp3`);
-        sound.volume = 0.3; // Set volume to 30%
-        sound.play().catch(error => {
-            console.log('Error playing sound:', error);
-        });
-    } catch (error) {
-        console.log('Error creating audio:', error);
-    }
-}
-
-// Background music handling
-function toggleBackgroundMusic() {
-    const bgMusic = document.getElementById('bgMusic');
-    if (bgMusic) {
-        if (bgmEnabled) {
-            bgMusic.src = 'sounds/background.mp3';
-            bgMusic.loop = true;
-            bgMusic.volume = 0.2;
-            bgMusic.play().catch(error => console.log('Error playing background music:', error));
-        } else {
-            bgMusic.pause();
-        }
-    }
-}
 
 // Create bricks based on level pattern
 function createBricks(level) {
@@ -256,10 +274,8 @@ function collisionDetection() {
                     b.status = 0;
                     score++;
                     
-                    if (sfxEnabled) {
-                        playSound('brickBreak');
-                    }
-
+                    playSound('brick_break');
+                    
                     // Check if level is complete
                     checkLevelComplete();
                     return;
@@ -279,11 +295,11 @@ function updateBallPosition(deltaTime) {
     if (nextX + ballRadius > canvas.width) {
         ball.x = canvas.width - ballRadius;
         ball.dx = -Math.abs(ball.dx); // Ensure it bounces left
-        if (sfxEnabled) playSound('wallHit');
+        playSound('wall_hit');
     } else if (nextX - ballRadius < 0) {
         ball.x = ballRadius;
         ball.dx = Math.abs(ball.dx); // Ensure it bounces right
-        if (sfxEnabled) playSound('wallHit');
+        playSound('wall_hit');
     } else {
         ball.x = nextX;
     }
@@ -292,7 +308,7 @@ function updateBallPosition(deltaTime) {
     if (nextY - ballRadius < 0) {
         ball.y = ballRadius;
         ball.dy = Math.abs(ball.dy); // Ensure it bounces down
-        if (sfxEnabled) playSound('wallHit');
+        playSound('wall_hit');
     } else {
         ball.y = nextY;
     }
@@ -300,7 +316,7 @@ function updateBallPosition(deltaTime) {
     // Bottom wall (lose life)
     if (nextY + ballRadius > canvas.height) {
         lives--;
-        if (sfxEnabled) playSound('gameOver');
+        if (sfxEnabled) playSound('game_over');
         if (lives === 0) {
             handleGameOver();
         } else {
@@ -328,7 +344,7 @@ function updateBallPosition(deltaTime) {
         
         // Ensure ball doesn't get stuck in paddle
         ball.y = paddle.y - ballRadius;
-        if (sfxEnabled) playSound('paddleHit');
+        playSound('paddle_hit');
     }
 }
 
@@ -370,20 +386,28 @@ function draw() {
 }
 
 function drawScore() {
-    ctx.font = '20px Arial';
-    ctx.fillStyle = '#FFF';
+    ctx.font = '16px "Press Start 2P"';
+    ctx.fillStyle = '#00f7ff';
+    ctx.shadowColor = '#00f7ff';
+    ctx.shadowBlur = 10;
     ctx.textAlign = 'left';
     ctx.fillText('Score: ' + score, 8, 30);
+    ctx.fillStyle = '#ffffff';  // High score in white
     ctx.fillText('High Score: ' + highScore, 8, 55);
+    ctx.fillStyle = '#00f7ff';
     ctx.textAlign = 'right';
     ctx.fillText('Level: ' + currentLevel, canvas.width - 8, 30);
+    ctx.shadowBlur = 0;  // Reset shadow
 }
 
 function drawLevelDisplay() {
-    ctx.font = '20px "Press Start 2P", "Courier New", monospace';
-    ctx.fillStyle = '#FF0000';  // Match heart color
+    ctx.font = '20px "Press Start 2P"';
+    ctx.fillStyle = '#00f7ff';
+    ctx.shadowColor = '#00f7ff';
+    ctx.shadowBlur = 10;
     ctx.textAlign = 'right';
     ctx.fillText(`LEVEL ${currentLevel}`, canvas.width - 40, canvas.height - 25);
+    ctx.shadowBlur = 0;  // Reset shadow
 }
 
 function drawLives() {
@@ -409,25 +433,93 @@ function drawLives() {
 }
 
 function drawGameOver() {
-    ctx.font = '48px "Press Start 2P", "Courier New", monospace';
-    ctx.fillStyle = '#ff6b6b';
-    ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2);
+    ctx.save();
     
-    ctx.font = '24px "Press Start 2P", "Courier New", monospace';
-    ctx.fillStyle = '#888';
-    ctx.fillText('Click or Press SPACE to return', canvas.width/2, canvas.height/2 + 40);
+    // Create gradient background for game over screen
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, 'rgba(26, 26, 46, 0.9)');
+    gradient.addColorStop(1, 'rgba(22, 33, 62, 0.9)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Game Over text with glow effect
+    ctx.font = "48px 'Press Start 2P'";
+    ctx.textAlign = 'center';
+    
+    // Text shadow for glow effect
+    ctx.shadowColor = '#00f7ff';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#00f7ff';
+    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 50);
+    
+    // Score display
+    ctx.font = "24px 'Press Start 2P'";
+    ctx.shadowColor = '#00f7ff';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 20);
+    
+    // High score display
+    if (score > highScore) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('New High Score!', canvas.width/2, canvas.height/2 + 60);
+    }
+    
+    // Continue text with animation
+    const now = Date.now();
+    const alpha = (Math.sin(now / 500) + 1) / 2; // Pulsing effect
+    ctx.globalAlpha = alpha;
+    ctx.font = "20px 'Press Start 2P'";
+    ctx.fillStyle = '#00f7ff';
+    ctx.fillText('Click or Press SPACE to return', canvas.width/2, canvas.height/2 + 100);
+    
+    ctx.restore();
 }
 
 function drawGameWon() {
-    ctx.font = '48px "Press Start 2P", "Courier New", monospace';
-    ctx.fillStyle = '#6bff6b';
-    ctx.textAlign = 'center';
-    ctx.fillText('YOU WIN!', canvas.width/2, canvas.height/2);
+    ctx.save();
     
-    ctx.font = '24px "Press Start 2P", "Courier New", monospace';
-    ctx.fillStyle = '#888';
-    ctx.fillText('Click or Press SPACE to return', canvas.width/2, canvas.height/2 + 40);
+    // Create gradient background for victory screen
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, 'rgba(26, 26, 46, 0.9)');
+    gradient.addColorStop(1, 'rgba(22, 33, 62, 0.9)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Victory text with glow effect
+    ctx.font = "48px 'Press Start 2P'";
+    ctx.textAlign = 'center';
+    
+    // Text shadow for glow effect
+    ctx.shadowColor = '#00f7ff';
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#00f7ff';
+    ctx.fillText('YOU WON!', canvas.width/2, canvas.height/2 - 50);
+    
+    // Score display
+    ctx.font = "24px 'Press Start 2P'";
+    ctx.shadowColor = '#00f7ff';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 20);
+    
+    // High score display
+    if (score > highScore) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText('New High Score!', canvas.width/2, canvas.height/2 + 60);
+    }
+    
+    // Continue text with animation
+    const now = Date.now();
+    const alpha = (Math.sin(now / 500) + 1) / 2; // Pulsing effect
+    ctx.globalAlpha = alpha;
+    ctx.font = "20px 'Press Start 2P'";
+    ctx.fillStyle = '#00f7ff';
+    ctx.fillText('Click or Press SPACE to return', canvas.width/2, canvas.height/2 + 100);
+    
+    ctx.restore();
 }
 
 function drawLevelStart() {
@@ -435,10 +527,16 @@ function drawLevelStart() {
     const elapsedTime = currentTime - levelAnimationStart;
     
     if (elapsedTime < 2000) {  // Show for 2 seconds
-        ctx.font = '48px "Press Start 2P", "Courier New", monospace';
-        ctx.fillStyle = `rgba(255, 255, 255, ${1 - elapsedTime/2000})`;
+        ctx.font = '48px "Press Start 2P"';
+        ctx.fillStyle = '#00f7ff';
+        ctx.shadowColor = '#00f7ff';
+        ctx.shadowBlur = 20;
         ctx.textAlign = 'center';
+        // Fade out effect
+        ctx.globalAlpha = 1 - elapsedTime/2000;
         ctx.fillText(`LEVEL ${currentLevel}`, canvas.width/2, canvas.height/2);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
     }
 }
 
@@ -565,21 +663,18 @@ function gameLoop(currentTime) {
 }
 
 function handleGameOver() {
+    // Stop background music and play game over sound
+    if (bgMusic) {
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+    }
+    playSound('game_over');
+    
     // Update high score if needed
-    if (score > highScore) {
-        highScore = score;
-        localStorage.setItem('breakoutHighScore', highScore);
+    const currentHighScore = localStorage.getItem('breakoutHighScore') || 0;
+    if (score > currentHighScore) {
+        localStorage.setItem('breakoutHighScore', score);
     }
-    
-    // Update highest level
-    const currentHighLevel = localStorage.getItem('breakoutHighLevel') || 1;
-    if (currentLevel > currentHighLevel) {
-        localStorage.setItem('breakoutHighLevel', currentLevel);
-    }
-    
-    // Stop background music
-    bgMusic.pause();
-    bgMusic.currentTime = 0;
     
     // Set game over state
     gameOver = true;
@@ -595,7 +690,14 @@ function startGame() {
     lives = 3;
     gameOver = false;
     gameWon = false;
-    playSound('gameStart');  // Play start sound
+    
+    // Play start sound then background music
+    playSound('game_start');
+    setTimeout(() => {
+        if (bgmEnabled) {
+            toggleBackgroundMusic();
+        }
+    }, 500);
 }
 
 function resetBall() {
@@ -623,7 +725,7 @@ levelAnimationStart = Date.now();
 
 // Start the game
 startGame();
-playSound('gameStart');  // Play start sound
+playSound('game_start');  // Play start sound
 
 // Start the game loop
 gameLoop(performance.now());
